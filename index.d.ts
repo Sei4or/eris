@@ -14,6 +14,17 @@ declare namespace Eris {
   export const VERSION: string;
 
   // TYPES
+
+  type InteractionOptions = {
+    allowedMentions?: AllowedMentions;
+    content?: string;
+    embed?: EmbedOptions;
+    flags?: number;
+    messageReference?: MessageReferenceReply;
+    tts?: boolean;
+    type: number;
+  };
+
   // Cache
   type Uncached = { id: string };
 
@@ -490,6 +501,7 @@ declare namespace Eris {
     selfStream: boolean;
     selfVideo: boolean;
   }
+
   interface EventListeners<T> {
     (event: "ready" | "disconnect", listener: () => void): T;
     (event: "callCreate" | "callRing" | "callDelete", listener: (call: Call) => void): T;
@@ -525,6 +537,7 @@ declare namespace Eris {
     (event: "guildUnavailable" | "unavailableGuildCreate", listener: (guild: UnavailableGuild) => void): T;
     (event: "guildUpdate", listener: (guild: Guild, oldGuild: OldGuild) => void): T;
     (event: "hello", listener: (trace: string[], id: number) => void): T;
+    (event: "interactionCreate", listener: (interaction: Interaction) => void): T;
     (event: "inviteCreate" | "inviteDelete", listener: (guild: Guild, invite: Invite) => void): T;
     (event: "messageCreate", listener: (message: Message<PossiblyUncachedTextableChannel>) => void): T;
     (event: "messageDelete" | "messageReactionRemoveAll", listener: (message: PossiblyUncachedMessage) => void): T;
@@ -1582,6 +1595,7 @@ declare namespace Eris {
     createGuildEmoji(guildID: string, options: EmojiOptions, reason?: string): Promise<Emoji>;
     createGuildFromTemplate(code: string, name: string, icon?: string): Promise<Guild>;
     createGuildTemplate(guildID: string, name: string, description?: string | null): Promise<GuildTemplate>;
+    createInteractionResponse(interactionID: string, interactionToken: string, options: InteractionOptions): Promise<void>;
     createMessage(channelID: string, content: MessageContent, file?: MessageFile | MessageFile[]): Promise<Message>;
     createRole(guildID: string, options?: RoleOptions | Role, reason?: string): Promise<Role>;
     crosspostMessage(channelID: string, messageID: string): Promise<Message>;
@@ -2159,6 +2173,34 @@ declare namespace Eris {
     toJSON(props?: string[]): JSONCache;
   }
 
+  //Interaction
+  export class Interaction {
+    applicationId: string;
+    channelId: string;
+    data?: {
+      componentType?: number;
+      id?: string;
+      custom_id?: string;
+      name?: string;
+      options?: { name?: string; value: string }
+    };
+    guildId?: string;
+    id: string;
+    member: Member;
+    message: Message;
+    token: string;
+    type: number;
+    version: number;
+    acknowledge(): Promise<void>;
+    createFollowup(content: InteractionOptions): Promise<Message>;
+    createMessage(content: InteractionOptions): Promise<void>;
+    defer(): Promise<void>;
+    deferUpdate(): Promise<void>;
+    delete(messageId: string): Promise<void>;
+    edit(messageId: string, content: InteractionOptions): Promise<Message>;
+    editParent(content: InteractionOptions): Promise<void>;
+  }
+
   // If CT (count) is "withMetadata", it will not have count properties
   export class Invite<CT extends "withMetadata" | "withCount" | "withoutCount" = "withMetadata", CH extends InviteChannel = InviteChannel> extends Base {
     channel: CH;
@@ -2168,10 +2210,10 @@ declare namespace Eris {
     guild: CT extends "withMetadata"
       ? Guild // Invite with Metadata always has guild prop
       : CH extends Extract<InviteChannel, GroupChannel> // Invite without Metadata
-        ? never // If the channel is GroupChannel, there is no guild
-        : CH extends Exclude<InviteChannel, InvitePartialChannel> // Invite without Metadata and not GroupChanel
-          ? Guild // If the invite channel is not partial
-          : Guild | undefined; // If the invite channel is partial
+      ? never // If the channel is GroupChannel, there is no guild
+      : CH extends Exclude<InviteChannel, InvitePartialChannel> // Invite without Metadata and not GroupChanel
+      ? Guild // If the invite channel is not partial
+      : Guild | undefined; // If the invite channel is partial
     inviter?: User;
     maxAge: CT extends "withMetadata" ? number : null;
     maxUses: CT extends "withMetadata" ? number : null;
@@ -2525,7 +2567,7 @@ declare namespace Eris {
     addMessageReaction(messageID: string, reaction: string, userID: string): Promise<void>;
     createInvite(options?: CreateInviteOptions, reason?: string): Promise<Invite<"withMetadata", TextChannel>>;
     createMessage(content: MessageContent, file?: MessageFile | MessageFile[]): Promise<Message<TextChannel>>;
-    createWebhook(options: { name: string; avatar?: string | null}, reason?: string): Promise<Webhook>;
+    createWebhook(options: { name: string; avatar?: string | null }, reason?: string): Promise<Webhook>;
     deleteMessage(messageID: string, reason?: string): Promise<void>;
     deleteMessages(messageIDs: string[], reason?: string): Promise<void>;
     edit(options: Omit<EditChannelOptions, "icon" | "ownerID">, reason?: string): Promise<this>;
